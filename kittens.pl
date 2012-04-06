@@ -8,6 +8,12 @@ $| = 1;
 my $INITIAL_BOUND = 12;
 my $LOW_DIMENSION = 90;
 
+my $COMIC_SANS = 1;
+my $RICK_ROLL = 1;
+my $KITTENS = 1;
+
+my $HOST = 'nginx-server';
+
 my $pid = $$;
 my $rand = 0;
 my $bound = $INITIAL_BOUND;
@@ -17,14 +23,28 @@ while (<>) {
 
    # Filter out some URLs from being kittened
    if ($_ =~ /placekitten\.com/i ||
+      $_ =~ /google\.com/i ||
       $_ =~ /nav.*\.gif/i) {
       print "$_\n";
 
       next;
    }
 
+   # RickRoll YouTube video requests
+   if ($RICK_ROLL == 1 &&
+      $_ =~ /(.*\.youtube\.com\/videoplayback.*)/) {
+      print "http://$HOST/images/rickroll.flv\n";
+
+      next;
+   }
+
+   # Randomly select if this request will be Comic Sans-ified
+   my $cssRand = irand(15) == 0;
+
    # Comic Sans-ify CSS files
-   if ($_ =~ /(.*\.css(\?.*){0,1})/i) {
+   if ($COMIC_SANS == 1 &&
+      $cssRand == 1 &&
+      $_ =~ /(.*\.css(\?.*){0,1})/i) {
       my $url = $1;
       my $digest = md5_hex($url);
       my $css = "/home/www/images/$digest.css";
@@ -37,7 +57,7 @@ while (<>) {
          close(CSS);
       }
 
-      print "http://slurm/images/$digest.css\n";
+      print "http://$HOST/images/$digest.css\n";
 
       next;
    }
@@ -45,7 +65,9 @@ while (<>) {
    # Randomly select if this request will be kittened
    $rand = irand($bound) == 0;
 
-   if ($_ =~ /(.*\.(jpg|jpeg|gif|png)(\?.*){0,1})/i && $rand == 1) {
+   if ($KITTENS == 1 &&
+      $rand == 1 &&
+      $_ =~ /(.*\.(jpg|jpeg|gif|png)(\?.*){0,1})/i) {
       my $url = $1;
       my $digest = md5_hex("$url.$2");
       my $image = "/home/www/images/$digest.$2";
@@ -56,7 +78,7 @@ while (<>) {
          # The file already exists, use it
          $bound = $INITIAL_BOUND;
 
-         print "http://slurm/images/$digest-kitten.$2\n";
+         print "http://$HOST/images/$digest-kitten.$2\n";
 
          next;
       } elsif (!-e $badImage) {
@@ -84,7 +106,7 @@ while (<>) {
 
             system("/usr/bin/wget", "-q", "-O", "$kittenImage", "$kitten");
 
-            print "http://slurm/images/$digest-kitten.$2\n";
+            print "http://$HOST/images/$digest-kitten.$2\n";
 
             next;
          }
